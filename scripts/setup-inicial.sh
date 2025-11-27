@@ -174,7 +174,7 @@ docker-compose run --rm \
         
         echo ""
         echo ">>> Paso 5.9: Creando app personalizada asignacion_equipo..."
-        printf "\n\n\n\n\n\n" | bench new-app asignacion_equipo
+        bench new-app asignacion_equipo --no-git
         
         echo ""
         echo ">>> Paso 5.9.1: Creando pyproject.toml con requests..."
