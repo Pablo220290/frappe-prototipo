@@ -24,7 +24,7 @@
 set -euo pipefail
 
 echo "==================================================="
-echo "CONFIGURACION FRAPPE - PROTOTIPO DIDACTICO (V3.0)"
+echo "CONFIGURACION FRAPPE - PROTOTIPO"
 echo "==================================================="
 
 # --------------------------------------------
