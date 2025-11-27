@@ -13,7 +13,7 @@ logs/
 scripts/setup-original.sh
 
 # Documentación interna 
-docs/Capacitacion.md
+docs/Capacitación.md
 
 # Python
 __pycache__/
