@@ -1,0 +1,39 @@
+# ============================================
+# .gitignore
+# ============================================
+
+# Instalación de Frappe 
+frappe-bench/
+
+# Logs
+logs/
+*.log
+
+# Archivos de configuración específicos 
+scripts/setup-original.sh
+
+# Documentación interna 
+docs/Capacitacion.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Entornos virtuales
+venv/
+.venv/
+env/
+
+# Variables de entorno
+.env
+.env.local
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

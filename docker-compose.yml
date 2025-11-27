@@ -1,0 +1,135 @@
+# =================================================
+# Docker Compose - Prototipo Didactico Frappe
+# =================================================
+
+services:
+  # ===========================================
+  # BASE DE DATOS - MariaDB
+  # ===========================================
+  mariadb:
+    image: mariadb:10.6
+    container_name: frappe_mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: admin123
+      MYSQL_DATABASE: frappe_db
+      MYSQL_USER: frappe
+      MYSQL_PASSWORD: frappe123
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - frappe-network
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --bind-address=0.0.0.0
+      - --max-connections=500
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-padmin123",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ===========================================
+  # CACHE - Redis Cache
+  # ===========================================
+  redis-cache:
+    image: redis:6.2-alpine
+    container_name: frappe_redis_cache
+    restart: unless-stopped
+    networks:
+      - frappe-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ===========================================
+  # QUEUE - Redis Queue
+  # ===========================================
+  redis-queue:
+    image: redis:6.2-alpine
+    container_name: frappe_redis_queue
+    restart: unless-stopped
+    networks:
+      - frappe-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ===========================================
+  # SOCKETIO - Redis SocketIO
+  # ===========================================
+  redis-socketio:
+    image: redis:6.2-alpine
+    container_name: frappe_redis_socketio
+    restart: unless-stopped
+    networks:
+      - frappe-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ===========================================
+  # APLICACION - Frappe/ERPNext
+  # ===========================================
+  frappe:
+    image: frappe/bench:latest
+    container_name: frappe_app
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+      redis-queue:
+        condition: service_healthy
+      redis-socketio:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+      - "9000:9000"
+    # MONTAMOS TODO EL PROYECTO EN /workspace
+    volumes:
+      - .:/workspace
+    networks:
+      - frappe-network
+    # El bench va a vivir en /workspace/frappe-bench
+    working_dir: /workspace/frappe-bench
+    command: >
+      bash -c "if [ -f ./Procfile ]; then
+        bench start;
+      else
+        sleep infinity;
+      fi"
+
+# ===========================================
+# VOLUMENES PERSISTENTES
+# ===========================================
+volumes:
+  mariadb_data:
+    driver: local
+
+# ===========================================
+# RED INTERNA
+# ===========================================
+networks:
+  frappe-network:
+    driver: bridge
+    name: frappe-prototipo_frappe-network
