@@ -173,11 +173,25 @@ docker-compose run --rm \
         bench --site desarrollo.local install-app hrms
         
         echo ""
-        echo ">>> Paso 5.9: Creando app personalizada asignacion_equipo..."
-        yes "" | timeout 30 bench new-app asignacion_equipo || bench new-app asignacion_equipo --no-git
-        
+        echo ">>> Paso 5.9: Instalando expect (para automatización)..."
+        apt-get update -qq && apt-get install -y expect > /dev/null 2>&1
+
         echo ""
-        echo ">>> Paso 5.9.1: Creando pyproject.toml con requests..."
+        echo ">>> Paso 5.9.1: Creando app personalizada asignacion_equipo..."
+        expect << 'EXPECT_EOF'
+        set timeout 60
+        spawn bench new-app asignacion_equipo
+        expect "App Title*" { send "\r" }
+        expect "App Description*" { send "\r" }
+        expect "Publisher*" { send "\r" }
+        expect "Email*" { send "\r" }
+        expect "Icon*" { send "\r" }
+        expect "Color*" { send "\r" }
+        expect eof
+        EXPECT_EOF
+
+        echo ""
+        echo ">>> Paso 5.9.2: Creando pyproject.toml con requests..."
         cat > apps/asignacion_equipo/pyproject.toml << "EOF"
 [project]
 name = "asignacion_equipo"
