@@ -6,10 +6,10 @@
 #   - Limpiar instalación previa ligera
 #   - Levantar MariaDB + Redis (via docker-compose)
 #   - Inicializar bench + sitio usando *el servicio frappe del compose*
-#   - Crear módulo "gestion" (evita conflicto de nombres)
+#   - Crear módulo "gestion" 
 #   - 🆕 CREAR DOCTYPE AUTOMÁTICAMENTE CON TODOS LOS CAMPOS
 #   - Levantar el contenedor frappe_app con bench start
-#   - 🆕 CONFIGURAR HOSTS DE WINDOWS (opcional, con prompt)
+#   - 🆕 CONFIGURAR HOSTS DE WINDOWS
 # ============================================
 # Procesos:
 #   ✅ Creación automática del módulo "gestion"
@@ -17,7 +17,7 @@
 #   ✅ Migración automática del DocType a la base de datos
 #   ✅ Tests pasan INMEDIATAMENTE después del setup
 #   ✅ Validación post-instalación más robusta
-#   ✅ Configuración de hosts integrada (fase 8 opcional)
+#   ✅ Configuración de hosts integrada 
 #   ✅ Instalación completa en UN SOLO comando
 # ============================================
 
@@ -174,21 +174,21 @@ docker-compose run --rm \
         
         echo ""
         echo ">>> Paso 5.9: Instalando expect (para automatización)..."
-        apt-get update -qq && apt-get install -y expect > /dev/null 2>&1
+        sudo apt-get update -qq && sudo apt-get install -y expect > /dev/null 2>&1
 
         echo ""
         echo ">>> Paso 5.9.1: Creando app personalizada asignacion_equipo..."
-        expect << 'EXPECT_EOF'
-        set timeout 60
-        spawn bench new-app asignacion_equipo
-        expect "App Title*" { send "\r" }
-        expect "App Description*" { send "\r" }
-        expect "Publisher*" { send "\r" }
-        expect "Email*" { send "\r" }
-        expect "Icon*" { send "\r" }
-        expect "Color*" { send "\r" }
-        expect eof
-        EXPECT_EOF
+        expect << "EXPECT_EOF"
+set timeout 60
+spawn bench new-app asignacion_equipo
+expect "App Title*" { send "\r" }
+expect "App Description*" { send "\r" }
+expect "Publisher*" { send "\r" }
+expect "Email*" { send "\r" }
+expect "Icon*" { send "\r" }
+expect "Color*" { send "\r" }
+expect eof
+EXPECT_EOF
 
         echo ""
         echo ">>> Paso 5.9.2: Creando pyproject.toml con requests..."
