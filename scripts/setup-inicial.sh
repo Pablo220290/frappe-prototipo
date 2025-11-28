@@ -181,17 +181,34 @@ docker-compose run --rm \
         expect << "EXPECT_EOF"
 set timeout 60
 spawn bench new-app asignacion_equipo
-expect "App Title*" { send "\r" }
-expect "App Description*" { send "\r" }
-expect "Publisher*" { send "\r" }
-expect "Email*" { send "\r" }
-expect "Icon*" { send "\r" }
-expect "Color*" { send "\r" }
-expect eof
+expect {
+    "App Title*" { send "\r"; exp_continue }
+    "App Description*" { send "\r"; exp_continue }
+    "Publisher*" { send "\r"; exp_continue }
+    "Email*" { send "\r"; exp_continue }
+    "Icon*" { send "\r"; exp_continue }
+    "Color*" { send "\r"; exp_continue }
+    eof
+}
 EXPECT_EOF
 
         echo ""
-        echo ">>> Paso 5.9.2: Creando pyproject.toml con requests..."
+        echo ">>> Paso 5.9.2: Verificando que la app se creó correctamente..."
+        if [ ! -d "apps/asignacion_equipo" ]; then
+            echo "❌ ERROR: La app asignacion_equipo no se creó"
+            echo "   Intentando con --no-git como fallback..."
+            bench new-app asignacion_equipo --no-git
+        fi
+        
+        if [ ! -d "apps/asignacion_equipo" ]; then
+            echo "❌ ERROR CRÍTICO: No se pudo crear la app"
+            exit 1
+        fi
+        
+        echo "✅ App asignacion_equipo creada correctamente"
+
+        echo ""
+        echo ">>> Paso 5.9.3: Creando pyproject.toml con requests..."
         cat > apps/asignacion_equipo/pyproject.toml << "EOF"
 [project]
 name = "asignacion_equipo"
