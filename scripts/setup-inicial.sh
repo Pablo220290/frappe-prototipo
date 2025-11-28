@@ -176,7 +176,7 @@ docker-compose run --rm \
         echo ">>> Paso 5.9: Creando app personalizada asignacion_equipo..."
         
         # Crear la app usando Python directamente (evita problemas con prompts interactivos)
-        python3 << "PYTHON_EOF"
+        python3 << 'PYTHON_EOF'
 import os
 import sys
 
