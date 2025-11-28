@@ -26,20 +26,11 @@ services:
       - --max-connections=500
     healthcheck:
       test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-          "-u",
-          "root",
-          "-padmin123",
-        ]
+        ["CMD", "sh", "-c", "mysqladmin ping -h localhost -uroot -padmin123"]
       interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      timeout: 10s
+      retries: 12
+      start_period: 90s
 
   # ===========================================
   # CACHE - Redis Cache
