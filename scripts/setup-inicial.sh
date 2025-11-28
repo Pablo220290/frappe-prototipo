@@ -176,42 +176,43 @@ docker-compose run --rm \
         echo ">>> Paso 5.9: Creando app personalizada asignacion_equipo..."
         
         # Crear la app usando Python directamente (evita problemas con prompts interactivos)
-        python3 <<'PYTHON_EOF'
-import os
-import sys
-import subprocess
-import shutil
+        python3 <<-'PYTHON_EOF'
+		import os
+		import sys
+		import subprocess
+		import shutil
+		
+		# Cambiar al directorio frappe-bench
+		os.chdir('/workspace/frappe-bench')
+		
+		# Crear estructura básica de la app
+		app_name = 'asignacion_equipo'
+		app_path = 'apps/' + app_name
+		
+		# Verificar si ya existe
+		if os.path.exists(app_path):
+		    print('App ya existe, eliminando...')
+		    shutil.rmtree(app_path)
+		
+		# Usar bench para crear la app con todas las respuestas por defecto
+		process = subprocess.Popen(
+		    ['bench', 'new-app', app_name],
+		    stdin=subprocess.PIPE,
+		    stdout=subprocess.PIPE,
+		    stderr=subprocess.PIPE,
+		    text=True
+		)
+		
+		# Enviar respuestas vacías (enters) para todas las preguntas
+		stdout, stderr = process.communicate(input='\n\n\n\n\n\n\n\n')
+		
+		if process.returncode == 0:
+		    print('App ' + app_name + ' creada exitosamente')
+		else:
+		    print('Error al crear app: ' + stderr)
+		    sys.exit(1)
+		PYTHON_EOF
 
-# Cambiar al directorio frappe-bench
-os.chdir('/workspace/frappe-bench')
-
-# Crear estructura básica de la app
-app_name = 'asignacion_equipo'
-app_path = 'apps/' + app_name
-
-# Verificar si ya existe
-if os.path.exists(app_path):
-    print('App ya existe, eliminando...')
-    shutil.rmtree(app_path)
-
-# Usar bench para crear la app con todas las respuestas por defecto
-process = subprocess.Popen(
-    ['bench', 'new-app', app_name],
-    stdin=subprocess.PIPE,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    text=True
-)
-
-# Enviar respuestas vacías (enters) para todas las preguntas
-stdout, stderr = process.communicate(input='\n\n\n\n\n\n\n\n')
-
-if process.returncode == 0:
-    print('App ' + app_name + ' creada exitosamente')
-else:
-    print('Error al crear app: ' + stderr)
-    sys.exit(1)
-PYTHON_EOF
 
 
         echo ""
