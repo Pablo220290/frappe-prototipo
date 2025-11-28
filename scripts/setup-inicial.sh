@@ -3,28 +3,19 @@
 # Script de Configuración Inicial
 # ============================================
 # Objetivo:
-#   - Limpiar instalación previa ligera
+#   - Limpiar instalación previa
 #   - Levantar MariaDB + Redis (via docker-compose)
-#   - Inicializar bench + sitio usando *el servicio frappe del compose*
-#   - Crear módulo "gestion" 
-#   - 🆕 CREAR DOCTYPE AUTOMÁTICAMENTE CON TODOS LOS CAMPOS
+#   - Inicializar bench + sitio desarrollo.local
+#   - Crear módulo "gestion"
+#   - Crear DocType automáticamente con todos los campos
 #   - Levantar el contenedor frappe_app con bench start
-#   - 🆕 CONFIGURAR HOSTS DE WINDOWS
-# ============================================
-# Procesos:
-#   ✅ Creación automática del módulo "gestion"
-#   ✅ DocType completo pre-configurado (JSON + Python + JS + Tests)
-#   ✅ Migración automática del DocType a la base de datos
-#   ✅ Tests pasan INMEDIATAMENTE después del setup
-#   ✅ Validación post-instalación más robusta
-#   ✅ Configuración de hosts integrada 
-#   ✅ Instalación completa en UN SOLO comando
+#   - Configurar hosts de Windows (opcional)
 # ============================================
 
 set -euo pipefail
 
 echo "==================================================="
-echo "CONFIGURACION FRAPPE - PROTOTIPO"
+echo "CONFIGURACION FRAPPE - PROTOTIPO DIDACTICO"
 echo "==================================================="
 
 # --------------------------------------------
@@ -41,7 +32,7 @@ echo ""
 # --------------------------------------------
 # 2) Validar prerequisitos
 # --------------------------------------------
-echo "[1/8] Validando prerequisitos..."
+echo "[1/9] Validando prerequisitos..."
 
 if ! command -v docker &> /dev/null; then
     echo "❌ Docker NO está instalado o no está en el PATH"
@@ -59,13 +50,12 @@ echo "✅ docker-compose detectado"
 echo ""
 
 # --------------------------------------------
-# 3) Limpiar instalación previa ligera
+# 3) Limpiar instalación previa
 # --------------------------------------------
-echo "[2/8] Limpiando instalación previa..."
+echo "[2/9] Limpiando instalación previa..."
 
 docker-compose down -v 2>/dev/null || true
 
-# Eliminar solo si existe
 if [ -d frappe-bench ]; then
     rm -rf frappe-bench 2>/dev/null || {
         echo "⚠️  No se pudo eliminar frappe-bench automáticamente"
@@ -85,7 +75,7 @@ echo ""
 # --------------------------------------------
 # 4) Levantar MariaDB + Redis
 # --------------------------------------------
-echo "[3/8] Iniciando servicios de base de datos..."
+echo "[3/9] Iniciando servicios de base de datos..."
 
 docker-compose up -d mariadb redis-cache redis-queue redis-socketio
 
@@ -117,7 +107,7 @@ echo ""
 # --------------------------------------------
 # 5) Inicializar Bench + Sitio desarrollo.local
 # --------------------------------------------
-echo "[4/8] Inicializando Frappe Bench y sitio 'desarrollo.local'..."
+echo "[4/9] Inicializando Frappe Bench y sitio 'desarrollo.local'..."
 echo "    (Este paso puede tardar 5-10 minutos)"
 echo ""
 
@@ -171,69 +161,49 @@ docker-compose run --rm \
         echo ""
         echo ">>> Paso 5.8: Instalando HRMS en el sitio..."
         bench --site desarrollo.local install-app hrms
+    '
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Error en la inicialización de Frappe"
+    echo "   Revisa los logs en logs/"
+    exit 1
+fi
+
+echo ""
+echo "✅ Bench inicializado correctamente"
+echo ""
+
+# --------------------------------------------
+# 6) Crear app personalizada asignacion_equipo
+# --------------------------------------------
+echo "[5/9] Creando app personalizada 'asignacion_equipo'..."
+
+docker-compose run --rm \
+    frappe \
+    bash -c 'cd /workspace/frappe-bench && echo -e "\n\n\n\n\n\n" | bench new-app asignacion_equipo'
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Error al crear la app asignacion_equipo"
+    exit 1
+fi
+
+echo "✅ App asignacion_equipo creada"
+echo ""
+
+# --------------------------------------------
+# 7) Instalar dependencias y configurar app
+# --------------------------------------------
+echo "[6/9] Configurando app asignacion_equipo..."
+
+docker-compose run --rm \
+    frappe \
+    bash -lc '
+        set -e
+        cd /workspace/frappe-bench
         
-        echo ""
-        echo ">>> Paso 5.9: Creando app personalizada asignacion_equipo..."
-        
-        # Crear script Python temporal
-        cat > /tmp/create_app.py << 'PYEOF'
-import os
-import sys
-import subprocess
-import shutil
-
-os.chdir('/workspace/frappe-bench')
-
-app_name = 'asignacion_equipo'
-app_path = 'apps/' + app_name
-
-if os.path.exists(app_path):
-    print('App ya existe, eliminando...')
-    shutil.rmtree(app_path)
-
-process = subprocess.Popen(
-    ['bench', 'new-app', app_name],
-    stdin=subprocess.PIPE,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    text=True
-)
-
-stdout, stderr = process.communicate(input='\n\n\n\n\n\n\n\n')
-
-if process.returncode == 0:
-    print('App ' + app_name + ' creada exitosamente')
-else:
-    print('Error al crear app: ' + stderr)
-    sys.exit(1)
-PYEOF
-        
-        # Ejecutar el script
-        python3 /tmp/create_app.py
-        
-        # Limpiar
-        rm -f /tmp/create_app.py
-
-
-
-
-        echo ""
-        echo ">>> Paso 5.9.1: Verificando que la app se creó correctamente..."
-        if [ ! -d "apps/asignacion_equipo" ]; then
-            echo "❌ ERROR: La app asignacion_equipo no se creó"
-            echo "   Intentando con --no-git como fallback..."
-            bench new-app asignacion_equipo --no-git
-        fi
-        
-        if [ ! -d "apps/asignacion_equipo" ]; then
-            echo "❌ ERROR CRÍTICO: No se pudo crear la app"
-            exit 1
-        fi
-        
-        echo "✅ App asignacion_equipo creada correctamente"
-
-        echo ""
-        echo ">>> Paso 5.9.2: Creando pyproject.toml con requests..."
+        echo ">>> Paso 7.1: Creando pyproject.toml con requests..."
         cat > apps/asignacion_equipo/pyproject.toml << "EOF"
 [project]
 name = "asignacion_equipo"
@@ -260,38 +230,37 @@ dev-dependencies = []
 EOF
         
         echo ""
-        echo ">>> Paso 5.9.3: Instalando dependencias de asignacion_equipo..."
+        echo ">>> Paso 7.2: Instalando dependencias de asignacion_equipo..."
         cd apps/asignacion_equipo
         pip install -e . --break-system-packages
         cd ../..
         
         echo ""
-        echo ">>> Paso 5.9.4: Verificando instalación de requests..."
+        echo ">>> Paso 7.3: Verificando instalación de requests..."
         python3 -c "import requests; print(f\"✅ requests {requests.__version__} instalado correctamente\")" || {
             echo "❌ Error al instalar requests"
             exit 1
         }
         
         echo ""
-        echo ">>> Paso 5.9.5: Instalando asignacion_equipo en el sitio..."
+        echo ">>> Paso 7.4: Instalando asignacion_equipo en el sitio..."
         bench --site desarrollo.local install-app asignacion_equipo
     '
 
 if [ $? -ne 0 ]; then
     echo ""
-    echo "❌ Error en la inicialización de Frappe"
-    echo "   Revisa los logs en logs/"
+    echo "❌ Error al configurar la app"
     exit 1
 fi
 
 echo ""
-echo "✅ Bench inicializado correctamente"
+echo "✅ App configurada correctamente"
 echo ""
 
 # --------------------------------------------
-# 6) Crear módulo "gestion" dentro de asignacion_equipo
+# 8) Crear módulo "gestion"
 # --------------------------------------------
-echo "[5/8] Creando módulo 'gestion' en asignacion_equipo..."
+echo "[7/9] Creando módulo 'gestion' en asignacion_equipo..."
 
 docker-compose run --rm \
     frappe \
@@ -316,11 +285,11 @@ docker-compose run --rm \
 echo "✅ Módulo 'gestion' creado correctamente"
 echo ""
 
-# ============================================
-# 🆕 FASE 6: CREACIÓN AUTOMÁTICA DEL DOCTYPE
-# ============================================
-echo "[6/8] 🎯 Creando DocType 'Asignacion de Equipo' automáticamente..."
-echo "    (Esta es la fase CLAVE del prototipo didáctico)"
+# --------------------------------------------
+# 9) Crear DocType 'Asignacion de Equipo'
+# --------------------------------------------
+echo "[8/9] Creando DocType 'Asignacion de Equipo' automáticamente..."
+echo "    (Esta es la fase clave del prototipo didáctico)"
 echo ""
 
 docker-compose run --rm \
@@ -329,14 +298,14 @@ docker-compose run --rm \
         set -e
         cd /workspace/frappe-bench
         
-        echo ">>> Paso 6.1: Creando estructura de directorios del DocType..."
+        echo ">>> Paso 9.1: Creando estructura de directorios del DocType..."
         DOCTYPE_PATH="apps/asignacion_equipo/asignacion_equipo/gestion/doctype/asignacion_de_equipo"
         mkdir -p "$DOCTYPE_PATH"
         
-        echo ">>> Paso 6.2: Creando __init__.py del DocType..."
+        echo ">>> Paso 9.2: Creando __init__.py del DocType..."
         touch "$DOCTYPE_PATH/__init__.py"
         
-        echo ">>> Paso 6.3: Creando asignacion_de_equipo.json (DEFINICIÓN DEL DOCTYPE)..."
+        echo ">>> Paso 9.3: Creando asignacion_de_equipo.json (DEFINICIÓN DEL DOCTYPE)..."
         cat > "$DOCTYPE_PATH/asignacion_de_equipo.json" << "DOCTYPE_JSON"
 {
  "actions": [],
@@ -559,40 +528,37 @@ DOCTYPE_JSON
         echo "✅ JSON del DocType creado"
         
         echo ""
-        echo ">>> Paso 6.4: Verificando que el JSON es válido..."
+        echo ">>> Paso 9.4: Verificando que el JSON es válido..."
         python3 -c "import json; json.load(open(\"$DOCTYPE_PATH/asignacion_de_equipo.json\"))" && \
             echo "✅ JSON válido" || { echo "❌ JSON inválido"; exit 1; }
         
         echo ""
-        echo ">>> Paso 6.5: Sincronizando DocType con la base de datos..."
+        echo ">>> Paso 9.5: Sincronizando DocType con la base de datos..."
         bench --site desarrollo.local migrate
         
         echo ""
-        echo ">>> Paso 6.6: Verificando que el DocType existe en la base de datos..."
+        echo ">>> Paso 9.6: Verificando que el DocType existe en la base de datos..."
         bench --site desarrollo.local console << "PYTHON_CHECK"
 import frappe
 frappe.init(site="desarrollo.local")
 frappe.connect()
 
-# Verificar que el DocType existe
 if frappe.db.exists("DocType", "Asignacion de Equipo"):
-    print("✅ DocType '\''Asignacion de Equipo'\'' creado exitosamente en la base de datos")
-    
-    # Verificar campos principales
+    print("✅ DocType Asignacion de Equipo creado exitosamente en la base de datos")
     meta = frappe.get_meta("Asignacion de Equipo")
     campos_criticos = ["empleado", "numero_serie", "tipo_equipo", "fecha_asignacion", "estado"]
     
     for campo in campos_criticos:
         if meta.has_field(campo):
-            print(f"  ✅ Campo '\''{campo}'\'' existe")
+            print(f"  ✅ Campo {campo} existe")
         else:
-            print(f"  ❌ Campo '\''{campo}'\'' NO existe")
+            print(f"  ❌ Campo {campo} NO existe")
             raise Exception(f"Campo crítico {campo} no encontrado")
     
     print("")
     print("🎉 TODOS LOS CAMPOS CRÍTICOS VERIFICADOS")
 else:
-    raise Exception("❌ DocType '\''Asignacion de Equipo'\'' NO fue creado")
+    raise Exception("❌ DocType Asignacion de Equipo NO fue creado")
 
 frappe.destroy()
 PYTHON_CHECK
@@ -604,27 +570,7 @@ PYTHON_CHECK
         fi
         
         echo ""
-        echo ">>> Paso 6.7: Creando asignacion_de_equipo.py (CONTROLLER)..."
-        # Este archivo ya debería estar en tu repositorio, pero lo verificamos
-        if [ ! -f "$DOCTYPE_PATH/asignacion_de_equipo.py" ]; then
-            echo "⚠️  ADVERTENCIA: asignacion_de_equipo.py no existe"
-            echo "   Debe ser copiado desde el repositorio"
-        else
-            echo "✅ Controller Python ya existe"
-        fi
-        
-        echo ""
-        echo ">>> Paso 6.8: Creando asignacion_de_equipo.js (CLIENT SCRIPT)..."
-        # Este archivo ya debería estar en tu repositorio, pero lo verificamos
-        if [ ! -f "$DOCTYPE_PATH/asignacion_de_equipo.js" ]; then
-            echo "⚠️  ADVERTENCIA: asignacion_de_equipo.js no existe"
-            echo "   Debe ser copiado desde el repositorio"
-        else
-            echo "✅ Client Script ya existe"
-        fi
-        
-        echo ""
-        echo ">>> Paso 6.9: Verificando estructura completa del DocType..."
+        echo ">>> Paso 9.7: Verificando estructura completa del DocType..."
         ls -lah "$DOCTYPE_PATH"
     '
 
@@ -639,9 +585,9 @@ echo "✅ DocType 'Asignacion de Equipo' creado y verificado correctamente"
 echo ""
 
 # --------------------------------------------
-# 7) Levantar servidor Frappe
+# 10) Levantar servidor Frappe
 # --------------------------------------------
-echo "[7/8] Levantando servidor Frappe..."
+echo "[9/9] Levantando servidor Frappe..."
 
 docker-compose up -d frappe
 
@@ -672,9 +618,11 @@ done
 echo ""
 
 # --------------------------------------------
-# 8) Validación final
+# Validación final
 # --------------------------------------------
-echo "[8/8] Validando instalación completa..."
+echo "==================================================="
+echo "VALIDANDO INSTALACIÓN"
+echo "==================================================="
 
 docker exec frappe_app bash -lc '
     cd /workspace/frappe-bench
@@ -705,8 +653,6 @@ frappe.connect()
 
 if frappe.db.exists("DocType", "Asignacion de Equipo"):
     print("✅ DocType existe en la base de datos")
-    
-    # Contar campos
     meta = frappe.get_meta("Asignacion de Equipo")
     print(f"  📊 Total de campos: {len(meta.fields)}")
     print(f"  🔑 Campos obligatorios: {len([f for f in meta.fields if f.reqd])}")
@@ -720,7 +666,7 @@ FINAL_CHECK
 
 echo ""
 echo "==================================================="
-echo " ✅ INSTALACION COMPLETADA (V3.0)"
+echo " ✅ INSTALACION COMPLETADA"
 echo "==================================================="
 echo ""
 echo "📊 RESUMEN DE LO INSTALADO:"
@@ -730,208 +676,21 @@ echo "   ✅ ERPNext v15"
 echo "   ✅ HRMS v15"
 echo "   ✅ App personalizada: asignacion_equipo"
 echo "   ✅ Módulo: gestion"
-echo "   ✅ 🎯 DocType 'Asignacion de Equipo' COMPLETO Y FUNCIONAL"
+echo "   ✅ DocType 'Asignacion de Equipo' completo y funcional"
 echo "   ✅ Dependencia requests>=2.31.0 instalada"
 echo ""
-echo "🎉 DIFERENCIA CLAVE EN V3.0:"
+echo "📚 PRÓXIMOS PASOS:"
 echo ""
-echo "   ✅ El DocType YA ESTÁ CREADO en la base de datos"
-echo "   ✅ Los tests pueden ejecutarse INMEDIATAMENTE"
-echo "   ✅ El prototipo está 100% funcional desde el inicio"
+echo "   1. Copiar archivos del DocType desde el repositorio:"
+echo "      → asignacion_de_equipo.py (Controller)"
+echo "      → asignacion_de_equipo.js (Client Script)"
+echo "      → test_asignacion_de_equipo.py (Tests)"
 echo ""
-
-# ============================================
-# FASE 9: CONFIGURACIÓN DE HOSTS (OPCIONAL)
-# ============================================
+echo "   2. Acceder a Frappe:"
+echo "      → http://localhost:8000"
+echo "      → Usuario: Administrator"
+echo "      → Contraseña: Admin@2025"
 echo ""
-echo "==================================================="
-echo "FASE OPCIONAL: CONFIGURACION DE ACCESO WEB"
-echo "==================================================="
-echo ""
-echo "Para acceder a Frappe desde tu navegador, necesitas configurar:"
-echo "  1. Entrada en archivo hosts de Windows"
-echo "  2. Sitio por defecto en Frappe"
-echo ""
-echo "⚠️  IMPORTANTE: Esto requiere permisos de ADMINISTRADOR"
-echo ""
-echo "¿Deseas configurar esto AHORA? (s/n)"
-read -r RESPUESTA
-
-if [[ "$RESPUESTA" != "s" && "$RESPUESTA" != "S" ]]; then
-    echo ""
-    echo "⏭️  Configuración de hosts omitida"
-    echo ""
-    echo "Para configurar más tarde, ejecuta:"
-    echo "  1. Cierra esta terminal"
-    echo "  2. Abre Git Bash COMO ADMINISTRADOR"
-    echo "  3. Ejecuta: bash scripts/configurar-hosts.sh"
-    echo ""
-    echo "Después podrás acceder a:"
-    echo "  🌐 http://desarrollo.local:8000"
-    echo "  👤 Usuario: Administrator"
-    echo "  🔑 Contraseña: Admin@2025"
-    echo ""
-    echo "📚 PRÓXIMOS PASOS:"
-    echo ""
-    echo "   1. El DocType 'Asignacion de Equipo' YA ESTÁ CREADO"
-    echo "      → Ir a: Desk → Buscar 'Asignacion de Equipo' → New"
-    echo ""
-    echo "   2. Ejecutar los tests para verificar:"
-    echo "      → docker exec frappe_app bash -c \"cd /workspace/frappe-bench && bench --site desarrollo.local run-tests asignacion_equipo\""
-    echo ""
-    echo "   3. Explorar el código del DocType en:"
-    echo "      → apps/asignacion_equipo/asignacion_equipo/gestion/doctype/asignacion_de_equipo/"
-    echo ""
-    echo "   4. Modificar campos y ver los cambios:"
-    echo "      → Editar el JSON"
-    echo "      → Ejecutar: bench migrate"
-    echo "      → Recargar el navegador"
-    echo ""
-    echo "==================================================="
-    exit 0
-fi
-
-echo ""
-echo "[9/9] Configurando acceso web..."
-echo ""
-
-# --------------------------------------------
-# 9.1) Verificar permisos de administrador
-# --------------------------------------------
-echo "   [9.1/9.4] Verificando permisos de administrador..."
-
-# Intentar escribir en el archivo hosts como test
-if ! touch /c/Windows/System32/drivers/etc/hosts 2>/dev/null; then
-    echo ""
-    echo "   ❌ ERROR: Este paso requiere permisos de ADMINISTRADOR"
-    echo ""
-    echo "   SOLUCIÓN:"
-    echo "   1. Cierra esta terminal"
-    echo "   2. Abre Git Bash COMO ADMINISTRADOR"
-    echo "      (Clic derecho → 'Ejecutar como administrador')"
-    echo "   3. Ejecuta: bash scripts/configurar-hosts.sh"
-    echo ""
-    echo "   O simplemente ejecuta el paso manual:"
-    echo "   1. Abre Notepad COMO ADMINISTRADOR"
-    echo "   2. Abre: C:\\Windows\\System32\\drivers\\etc\\hosts"
-    echo "   3. Agrega al final: 127.0.0.1   desarrollo.local"
-    echo "   4. Guarda el archivo"
-    echo ""
-    exit 1
-fi
-
-echo "   ✅ Permisos de administrador confirmados"
-
-# --------------------------------------------
-# 9.2) Agregar entrada al archivo hosts
-# --------------------------------------------
-echo "   [9.2/9.4] Configurando archivo hosts de Windows..."
-
-HOSTS_FILE="/c/Windows/System32/drivers/etc/hosts"
-ENTRY="127.0.0.1   desarrollo.local"
-
-# Verificar si la entrada ya existe
-if grep -q "desarrollo.local" "$HOSTS_FILE" 2>/dev/null; then
-    echo "   ℹ️  La entrada 'desarrollo.local' ya existe en hosts"
-else
-    echo "$ENTRY" >> "$HOSTS_FILE"
-    echo "   ✅ Entrada agregada al archivo hosts"
-fi
-
-# --------------------------------------------
-# 9.3) Configurar sitio por defecto en Frappe
-# --------------------------------------------
-echo "   [9.3/9.4] Configurando sitio por defecto en Frappe..."
-
-# Verificar que el contenedor esté corriendo
-if ! docker ps | grep -q frappe_app; then
-    echo "   ❌ El contenedor frappe_app no está corriendo"
-    echo "      Ejecuta: docker-compose up -d frappe"
-    exit 1
-fi
-
-# Crear archivo currentsite.txt
-docker exec frappe_app bash -lc \
-    "cd /workspace/frappe-bench && echo 'desarrollo.local' > sites/currentsite.txt" 2>/dev/null
-
-echo "   ✅ Sitio por defecto configurado: desarrollo.local"
-
-# --------------------------------------------
-# 9.4) Reiniciar contenedor para aplicar cambios
-# --------------------------------------------
-echo "   [9.4/9.4] Reiniciando contenedor frappe_app..."
-
-docker restart frappe_app > /dev/null 2>&1
-
-echo "   ✅ Contenedor reiniciado"
-echo ""
-
-# --------------------------------------------
-# Esperar a que Frappe esté listo
-# --------------------------------------------
-echo "   ⏳ Esperando a que Frappe inicie (30-60 segundos)..."
-
-MAX_INTENTOS=30
-INTENTO=1
-
-while [ $INTENTO -le $MAX_INTENTOS ]; do
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://desarrollo.local:8000 2>/dev/null || echo "000")
-    
-    if [ "$HTTP_CODE" == "200" ] || [ "$HTTP_CODE" == "302" ]; then
-        echo "   ✅ Frappe está respondiendo correctamente"
-        break
-    fi
-    
-    if [ $INTENTO -eq $MAX_INTENTOS ]; then
-        echo "   ⚠️  Frappe no respondió después de $MAX_INTENTOS intentos"
-        echo "      Verifica los logs con: docker logs frappe_app"
-        break
-    fi
-    
-    echo "      Intento $INTENTO/$MAX_INTENTOS..."
-    INTENTO=$((INTENTO + 1))
-    sleep 2
-done
-
-echo ""
-echo "==================================================="
-echo "✅ INSTALACION Y CONFIGURACION COMPLETADAS (V3.0)"
-echo "==================================================="
-echo ""
-echo "🎉 ¡TODO LISTO! Accede a Frappe en tu navegador:"
-echo ""
-echo "  🌐 URL:        http://desarrollo.local:8000"
-echo "  👤 Usuario:    Administrator"
-echo "  🔑 Contraseña: Admin@2025"
-echo ""
-echo "📊 RESUMEN COMPLETO:"
-echo ""
-echo "   ✅ Frappe Framework v15 + ERPNext + HRMS"
-echo "   ✅ App: asignacion_equipo"
-echo "   ✅ Módulo: gestion"
-echo "   ✅ 🎯 DocType 'Asignacion de Equipo' COMPLETO"
-echo "   ✅ Dependencia requests>=2.31.0"
-echo "   ✅ Archivo hosts configurado"
-echo "   ✅ Sitio por defecto: desarrollo.local"
-echo ""
-echo "🚀 PRUEBA EL PROTOTIPO:"
-echo ""
-echo "   1. Abrir: http://desarrollo.local:8000"
-echo "   2. Login con: Administrator / Admin@2025"
-echo "   3. Buscar 'Asignacion de Equipo' en el Desk"
-echo "   4. Crear un nuevo registro"
-echo "   5. Presionar el botón 'Verificar Garantía'"
-echo ""
-echo "🧪 EJECUTAR TESTS:"
-echo ""
-echo "   docker exec frappe_app bash -c \"cd /workspace/frappe-bench && bench --site desarrollo.local run-tests asignacion_equipo\""
-echo ""
-echo "📁 EXPLORAR EL CÓDIGO:"
-echo ""
-echo "   apps/asignacion_equipo/asignacion_equipo/gestion/doctype/asignacion_de_equipo/"
-echo "   ├── asignacion_de_equipo.json  ← Definición del DocType"
-echo "   ├── asignacion_de_equipo.py    ← Controller (lógica de negocio)"
-echo "   ├── asignacion_de_equipo.js    ← Client Script (UI)"
-echo "   └── test_asignacion_de_equipo.py ← Tests"
+echo "   3. Buscar 'Asignacion de Equipo' y crear un registro de prueba"
 echo ""
 echo "==================================================="
