@@ -175,13 +175,64 @@ echo "✅ Bench inicializado correctamente"
 echo ""
 
 # --------------------------------------------
-# 6) Crear app personalizada asignacion_equipo
+# 6) Crear app personalizada asignacion_equipo (SIN bench new-app)
 # --------------------------------------------
 echo "[5/9] Creando app personalizada 'asignacion_equipo'..."
 
 docker-compose run --rm \
     frappe \
-    bash -c 'cd /workspace/frappe-bench && echo -e "\n\n\n\n\n\n" | bench new-app asignacion_equipo'
+    bash -lc '
+        set -e
+        cd /workspace/frappe-bench/apps
+        
+        APP_NAME="asignacion_equipo"
+        
+        echo ">>> Creando estructura de la app manualmente..."
+        
+        mkdir -p ${APP_NAME}/${APP_NAME}
+        
+        # __init__.py raíz
+        cat > ${APP_NAME}/${APP_NAME}/__init__.py << "INITPY"
+__version__ = "0.0.1"
+INITPY
+        
+        # hooks.py
+        cat > ${APP_NAME}/${APP_NAME}/hooks.py << "HOOKS"
+app_name = "asignacion_equipo"
+app_title = "Asignacion Equipo"
+app_publisher = "Equipo Desarrollo"
+app_description = "App para gestión de asignación de equipos a empleados"
+app_email = "dev@empresa.com"
+app_license = "MIT"
+HOOKS
+        
+        # modules.txt vacío
+        touch ${APP_NAME}/${APP_NAME}/modules.txt
+        
+        # patches.txt vacío
+        touch ${APP_NAME}/${APP_NAME}/patches.txt
+        
+        # __init__.py del paquete principal
+        touch ${APP_NAME}/__init__.py
+        
+        # setup.py mínimo
+        cat > ${APP_NAME}/setup.py << "SETUP"
+from setuptools import setup, find_packages
+setup(
+    name="asignacion_equipo",
+    version="0.0.1",
+    packages=find_packages(),
+    zip_safe=False,
+    include_package_data=True,
+)
+SETUP
+        
+        echo ">>> Verificando estructura creada..."
+        ls -la ${APP_NAME}/
+        ls -la ${APP_NAME}/${APP_NAME}/
+        
+        echo "✅ App asignacion_equipo creada manualmente"
+    '
 
 if [ $? -ne 0 ]; then
     echo ""
