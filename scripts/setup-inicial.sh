@@ -173,27 +173,48 @@ docker-compose run --rm \
         bench --site desarrollo.local install-app hrms
         
         echo ""
-        echo ">>> Paso 5.9: Instalando expect (para automatización)..."
-        sudo apt-get update -qq && sudo apt-get install -y expect > /dev/null 2>&1
+        echo ">>> Paso 5.9: Creando app personalizada asignacion_equipo..."
+        
+        # Crear la app usando Python directamente (evita problemas con prompts interactivos)
+        python3 << "PYTHON_EOF"
+import os
+import sys
+
+# Cambiar al directorio frappe-bench
+os.chdir('/workspace/frappe-bench')
+
+# Crear estructura básica de la app
+app_name = 'asignacion_equipo'
+app_path = f'apps/{app_name}'
+
+# Verificar si ya existe
+if os.path.exists(app_path):
+    print(f"⚠️  App {app_name} ya existe, eliminando...")
+    import shutil
+    shutil.rmtree(app_path)
+
+# Usar bench para crear la app con todas las respuestas por defecto
+import subprocess
+process = subprocess.Popen(
+    ['bench', 'new-app', app_name],
+    stdin=subprocess.PIPE,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    text=True
+)
+
+# Enviar respuestas vacías (enters) para todas las preguntas
+stdout, stderr = process.communicate(input='\n\n\n\n\n\n\n\n')
+
+if process.returncode == 0:
+    print(f"✅ App {app_name} creada exitosamente")
+else:
+    print(f"❌ Error al crear app: {stderr}")
+    sys.exit(1)
+PYTHON_EOF
 
         echo ""
-        echo ">>> Paso 5.9.1: Creando app personalizada asignacion_equipo..."
-        expect << "EXPECT_EOF"
-set timeout 60
-spawn bench new-app asignacion_equipo
-expect {
-    "App Title*" { send "\r"; exp_continue }
-    "App Description*" { send "\r"; exp_continue }
-    "Publisher*" { send "\r"; exp_continue }
-    "Email*" { send "\r"; exp_continue }
-    "Icon*" { send "\r"; exp_continue }
-    "Color*" { send "\r"; exp_continue }
-    eof
-}
-EXPECT_EOF
-
-        echo ""
-        echo ">>> Paso 5.9.2: Verificando que la app se creó correctamente..."
+        echo ">>> Paso 5.9.1: Verificando que la app se creó correctamente..."
         if [ ! -d "apps/asignacion_equipo" ]; then
             echo "❌ ERROR: La app asignacion_equipo no se creó"
             echo "   Intentando con --no-git como fallback..."
@@ -208,7 +229,7 @@ EXPECT_EOF
         echo "✅ App asignacion_equipo creada correctamente"
 
         echo ""
-        echo ">>> Paso 5.9.3: Creando pyproject.toml con requests..."
+        echo ">>> Paso 5.9.2: Creando pyproject.toml con requests..."
         cat > apps/asignacion_equipo/pyproject.toml << "EOF"
 [project]
 name = "asignacion_equipo"
@@ -235,20 +256,20 @@ dev-dependencies = []
 EOF
         
         echo ""
-        echo ">>> Paso 5.9.2: Instalando dependencias de asignacion_equipo..."
+        echo ">>> Paso 5.9.3: Instalando dependencias de asignacion_equipo..."
         cd apps/asignacion_equipo
         pip install -e . --break-system-packages
         cd ../..
         
         echo ""
-        echo ">>> Paso 5.9.3: Verificando instalación de requests..."
+        echo ">>> Paso 5.9.4: Verificando instalación de requests..."
         python3 -c "import requests; print(f\"✅ requests {requests.__version__} instalado correctamente\")" || {
             echo "❌ Error al instalar requests"
             exit 1
         }
         
         echo ""
-        echo ">>> Paso 5.10: Instalando asignacion_equipo en el sitio..."
+        echo ">>> Paso 5.9.5: Instalando asignacion_equipo en el sitio..."
         bench --site desarrollo.local install-app asignacion_equipo
     '
 
