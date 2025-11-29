@@ -161,6 +161,14 @@ docker-compose run --rm \
         echo ""
         echo ">>> Paso 5.8: Instalando HRMS en el sitio..."
         bench --site desarrollo.local install-app hrms
+        
+        echo ""
+        echo ">>> Paso 5.9: Configurando sitio por defecto..."
+        bench use desarrollo.local
+        
+        echo ""
+        echo ">>> Paso 5.10: Generando Procfile..."
+        bench setup procfile
     '
 
 if [ $? -ne 0 ]; then
