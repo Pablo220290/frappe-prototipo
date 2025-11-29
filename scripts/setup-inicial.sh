@@ -168,7 +168,16 @@ docker-compose run --rm \
         
         echo ""
         echo ">>> Paso 5.10: Generando Procfile..."
-        bench setup procfile --skip-redis
+        bench setup procfile
+        
+        echo ""
+        echo ">>> Paso 5.11: Eliminando servicios Redis del Procfile..."
+        sed -i "/redis_cache/d" Procfile
+        sed -i "/redis_queue/d" Procfile
+        sed -i "/redis_socketio/d" Procfile
+        
+        echo ">>> Verificando Procfile limpio..."
+        cat Procfile
     '
 
 if [ $? -ne 0 ]; then
