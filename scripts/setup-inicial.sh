@@ -168,7 +168,7 @@ docker-compose run --rm \
         
         echo ""
         echo ">>> Paso 5.10: Generando Procfile..."
-        bench setup procfile
+        bench setup procfile --skip-redis
     '
 
 if [ $? -ne 0 ]; then
@@ -450,7 +450,7 @@ docker-compose run --rm \
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Tipo de Equipo",
-   "options": "Laptop\\nComputadora de Escritorio\\nMonitor\\nTeclado\\nMouse\\nAuriculares\\nOtro",
+   "options": "Laptop\nComputadora de Escritorio\nMonitor\nTeclado\nMouse\nAuriculares\nOtro",
    "reqd": 1
   },
   {
@@ -488,7 +488,7 @@ docker-compose run --rm \
    "fieldname": "estado_garantia",
    "fieldtype": "Select",
    "label": "Estado de Garantía",
-   "options": "Desconocido\\nActiva\\nVencida",
+   "options": "Desconocido\nActiva\nVencida",
    "read_only": 1
   },
   {
@@ -515,7 +515,7 @@ docker-compose run --rm \
    "fieldname": "estado",
    "fieldtype": "Select",
    "label": "Estado",
-   "options": "Asignado\\nDevuelto\\nExtraviado\\nDañado",
+   "options": "Asignado\nDevuelto\nExtraviado\nDañado",
    "reqd": 1,
    "in_list_view": 1
   },
