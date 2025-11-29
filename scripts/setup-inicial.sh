@@ -191,10 +191,16 @@ docker-compose run --rm \
         
         mkdir -p ${APP_NAME}/${APP_NAME}
         
-        # __init__.py raíz
-        cat > ${APP_NAME}/${APP_NAME}/__init__.py << "INITPY"
-__version__ = "0.0.1"
+        # __init__.py raíz del paquete (CRÍTICO para que Python lo reconozca)
+        cat > ${APP_NAME}/__init__.py << "INITPY"
+# -*- coding: utf-8 -*-
 INITPY
+        
+        # __init__.py del módulo principal con versión
+        cat > ${APP_NAME}/${APP_NAME}/__init__.py << "INITPY2"
+# -*- coding: utf-8 -*-
+__version__ = "0.0.1"
+INITPY2
         
         # hooks.py
         cat > ${APP_NAME}/${APP_NAME}/hooks.py << "HOOKS"
@@ -212,23 +218,43 @@ HOOKS
         # patches.txt vacío
         touch ${APP_NAME}/${APP_NAME}/patches.txt
         
-        # __init__.py del paquete principal
-        touch ${APP_NAME}/__init__.py
-        
-        # setup.py mínimo
+        # setup.py (CRÍTICO - debe estar bien configurado)
         cat > ${APP_NAME}/setup.py << "SETUP"
 from setuptools import setup, find_packages
+
 setup(
     name="asignacion_equipo",
     version="0.0.1",
+    description="App para gestión de asignación de equipos a empleados",
+    author="Equipo Desarrollo",
+    author_email="dev@empresa.com",
     packages=find_packages(),
     zip_safe=False,
     include_package_data=True,
+    install_requires=[
+        "frappe",
+        "requests>=2.31.0"
+    ],
 )
 SETUP
+
+        # README.md (requerido por pyproject.toml si se usa)
+        cat > ${APP_NAME}/README.md << "README"
+# Asignacion Equipo
+
+App para gestión de asignación de equipos a empleados.
+
+## Características
+- Vinculación con módulo Employee (HRMS)
+- Verificación de garantías vía API REST
+- Validaciones de número de serie
+README
         
         echo ">>> Verificando estructura creada..."
+        echo "Contenido de apps/asignacion_equipo/:"
         ls -la ${APP_NAME}/
+        echo ""
+        echo "Contenido de apps/asignacion_equipo/asignacion_equipo/:"
         ls -la ${APP_NAME}/${APP_NAME}/
         
         echo "✅ App asignacion_equipo creada manualmente"
@@ -254,59 +280,40 @@ docker-compose run --rm \
         set -e
         cd /workspace/frappe-bench
         
-        echo ">>> Paso 7.0: Creando README.md de la app..."
-        cat > apps/asignacion_equipo/README.md << "README_APP"
-# Asignacion Equipo
-
-App para gestión de asignación de equipos a empleados.
-
-## Características
-- Vinculación con módulo Employee (HRMS)
-- Verificación de garantías vía API REST
-- Validaciones de número de serie
-README_APP
-
-        echo ">>> Paso 7.1: Creando pyproject.toml con requests..."
-        cat > apps/asignacion_equipo/pyproject.toml << "EOF"
-[project]
-name = "asignacion_equipo"
-version = "0.0.1"
-description = "App de Asignación de Equipos con gestión de garantías"
-authors = [
-    {name = "Tu Empresa", email = "dev@tuempresa.com"}
-]
-readme = "README.md"
-requires-python = ">=3.10"
-license = {text = "MIT"}
-
-dependencies = [
-    "frappe",
-    "requests>=2.31.0"
-]
-
-[build-system]
-requires = ["flit_core >=3.4,<4"]
-build-backend = "flit_core.buildapi"
-
-[tool.bench]
-dev-dependencies = []
-EOF
+        echo ">>> Paso 7.1: Verificando estructura de la app..."
+        echo "Archivos en apps/asignacion_equipo/:"
+        find apps/asignacion_equipo -type f -name "*.py" -o -name "*.txt" | head -20
         
         echo ""
-        echo ">>> Paso 7.2: Instalando dependencias de asignacion_equipo..."
+        echo ">>> Paso 7.2: Instalando app en el virtualenv de Frappe..."
+        echo "    (CRÍTICO: Usar el pip del virtualenv, no el del sistema)"
+        
         cd apps/asignacion_equipo
-        pip install -e . --break-system-packages
+        
+        # SOLUCIÓN CLAVE: Usar el pip del virtualenv de Frappe
+        ../../env/bin/pip install -e .
+        
         cd ../..
         
         echo ""
-        echo ">>> Paso 7.3: Verificando instalación de requests..."
-        python3 -c "import requests; print(f\"✅ requests {requests.__version__} instalado correctamente\")" || {
-            echo "❌ Error al instalar requests"
+        echo ">>> Paso 7.3: Verificando que el módulo es importable..."
+        env/bin/python -c "import asignacion_equipo; print(f\"✅ Módulo asignacion_equipo importado correctamente\")" || {
+            echo "❌ Error: No se puede importar asignacion_equipo"
+            echo "Verificando PYTHONPATH..."
+            env/bin/python -c "import sys; print(sys.path)"
             exit 1
         }
         
         echo ""
-        echo ">>> Paso 7.4: Registrando app en apps.txt..."
+        echo ">>> Paso 7.4: Verificando instalación de requests..."
+        env/bin/python -c "import requests; print(f\"✅ requests {requests.__version__} instalado correctamente\")" || {
+            echo "❌ Error al verificar requests"
+            exit 1
+        }
+        
+        echo ""
+        echo ">>> Paso 7.5: Registrando app en apps.txt..."
+        # Asegurar salto de línea al final del archivo antes de agregar
         sed -i -e '\''$a\'\'' sites/apps.txt 2>/dev/null || true
         echo "asignacion_equipo" >> sites/apps.txt
         
@@ -315,7 +322,7 @@ EOF
         cat -A sites/apps.txt
         
         echo ""
-        echo ">>> Paso 7.5: Instalando asignacion_equipo en el sitio..."
+        echo ">>> Paso 7.6: Instalando asignacion_equipo en el sitio..."
         bench --site desarrollo.local install-app asignacion_equipo
     '
 
@@ -714,7 +721,7 @@ docker exec frappe_app bash -lc '
     
     echo ""
     echo ">>> Verificando dependencia requests..."
-    python3 -c "import requests; print(f\"✅ requests {requests.__version__}\")"
+    env/bin/python -c "import requests; print(f\"✅ requests {requests.__version__}\")"
     
     echo ""
     echo ">>> Verificando DocType en base de datos..."
