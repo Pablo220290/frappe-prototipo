@@ -191,7 +191,7 @@ docker-compose run --rm \
         
         mkdir -p ${APP_NAME}/${APP_NAME}
         
-        # __init__.py raíz del paquete (CRÍTICO para que Python lo reconozca)
+        # __init__.py raíz del paquete
         cat > ${APP_NAME}/__init__.py << "INITPY"
 # -*- coding: utf-8 -*-
 INITPY
@@ -218,7 +218,7 @@ HOOKS
         # patches.txt vacío
         touch ${APP_NAME}/${APP_NAME}/patches.txt
         
-        # setup.py (CRÍTICO - debe estar bien configurado)
+        # setup.py
         cat > ${APP_NAME}/setup.py << "SETUP"
 from setuptools import setup, find_packages
 
@@ -238,23 +238,15 @@ setup(
 )
 SETUP
 
-        # README.md (requerido por pyproject.toml si se usa)
+        # README.md
         cat > ${APP_NAME}/README.md << "README"
 # Asignacion Equipo
 
 App para gestión de asignación de equipos a empleados.
-
-## Características
-- Vinculación con módulo Employee (HRMS)
-- Verificación de garantías vía API REST
-- Validaciones de número de serie
 README
         
         echo ">>> Verificando estructura creada..."
-        echo "Contenido de apps/asignacion_equipo/:"
         ls -la ${APP_NAME}/
-        echo ""
-        echo "Contenido de apps/asignacion_equipo/asignacion_equipo/:"
         ls -la ${APP_NAME}/${APP_NAME}/
         
         echo "✅ App asignacion_equipo creada manualmente"
@@ -280,49 +272,26 @@ docker-compose run --rm \
         set -e
         cd /workspace/frappe-bench
         
-        echo ">>> Paso 7.1: Verificando estructura de la app..."
-        echo "Archivos en apps/asignacion_equipo/:"
-        find apps/asignacion_equipo -type f -name "*.py" -o -name "*.txt" | head -20
-        
-        echo ""
-        echo ">>> Paso 7.2: Instalando app en el virtualenv de Frappe..."
-        echo "    (CRÍTICO: Usar el pip del virtualenv, no el del sistema)"
-        
+        echo ">>> Paso 7.1: Instalando app en el virtualenv de Frappe..."
         cd apps/asignacion_equipo
-        
-        # SOLUCIÓN CLAVE: Usar el pip del virtualenv de Frappe
         ../../env/bin/pip install -e .
-        
         cd ../..
         
         echo ""
-        echo ">>> Paso 7.3: Verificando que el módulo es importable..."
-        env/bin/python -c "import asignacion_equipo; print(f\"✅ Módulo asignacion_equipo importado correctamente\")" || {
-            echo "❌ Error: No se puede importar asignacion_equipo"
-            echo "Verificando PYTHONPATH..."
-            env/bin/python -c "import sys; print(sys.path)"
-            exit 1
-        }
+        echo ">>> Paso 7.2: Verificando que el módulo es importable..."
+        env/bin/python -c "import asignacion_equipo; print(\"✅ Módulo asignacion_equipo importado correctamente\")"
         
         echo ""
-        echo ">>> Paso 7.4: Verificando instalación de requests..."
-        env/bin/python -c "import requests; print(f\"✅ requests {requests.__version__} instalado correctamente\")" || {
-            echo "❌ Error al verificar requests"
-            exit 1
-        }
+        echo ">>> Paso 7.3: Verificando instalación de requests..."
+        env/bin/python -c "import requests; print(f\"✅ requests {requests.__version__} instalado\")"
         
         echo ""
-        echo ">>> Paso 7.5: Registrando app en apps.txt..."
-        # Asegurar salto de línea al final del archivo antes de agregar
+        echo ">>> Paso 7.4: Registrando app en apps.txt..."
         sed -i -e '\''$a\'\'' sites/apps.txt 2>/dev/null || true
         echo "asignacion_equipo" >> sites/apps.txt
         
-        echo ">>> Verificando apps.txt..."
-        echo "Contenido de apps.txt:"
-        cat -A sites/apps.txt
-        
         echo ""
-        echo ">>> Paso 7.6: Instalando asignacion_equipo en el sitio..."
+        echo ">>> Paso 7.5: Instalando asignacion_equipo en el sitio..."
         bench --site desarrollo.local install-app asignacion_equipo
     '
 
@@ -384,7 +353,16 @@ docker-compose run --rm \
         echo ">>> Paso 9.2: Creando __init__.py del DocType..."
         touch "$DOCTYPE_PATH/__init__.py"
         
-        echo ">>> Paso 9.3: Creando asignacion_de_equipo.json (DEFINICIÓN DEL DOCTYPE)..."
+        echo ">>> Paso 9.3: Copiando archivos del DocType desde el repositorio..."
+        cp /workspace/archivos/asignacion_de_equipo.py "$DOCTYPE_PATH/"
+        cp /workspace/archivos/asignacion_de_equipo.js "$DOCTYPE_PATH/"
+        cp /workspace/archivos/test_asignacion_de_equipo.py "$DOCTYPE_PATH/"
+        
+        echo ">>> Verificando archivos copiados..."
+        ls -la "$DOCTYPE_PATH/"
+        
+        echo ""
+        echo ">>> Paso 9.4: Creando asignacion_de_equipo.json (DEFINICIÓN DEL DOCTYPE)..."
         cat > "$DOCTYPE_PATH/asignacion_de_equipo.json" << "DOCTYPE_JSON"
 {
  "actions": [],
@@ -607,16 +585,16 @@ DOCTYPE_JSON
         echo "✅ JSON del DocType creado"
         
         echo ""
-        echo ">>> Paso 9.4: Verificando que el JSON es válido..."
+        echo ">>> Paso 9.5: Verificando que el JSON es válido..."
         python3 -c "import json; json.load(open(\"$DOCTYPE_PATH/asignacion_de_equipo.json\"))" && \
             echo "✅ JSON válido" || { echo "❌ JSON inválido"; exit 1; }
         
         echo ""
-        echo ">>> Paso 9.5: Sincronizando DocType con la base de datos..."
+        echo ">>> Paso 9.6: Sincronizando DocType con la base de datos..."
         bench --site desarrollo.local migrate
         
         echo ""
-        echo ">>> Paso 9.6: Verificando que el DocType existe en la base de datos..."
+        echo ">>> Paso 9.7: Verificando que el DocType existe en la base de datos..."
         bench --site desarrollo.local console << "PYTHON_CHECK"
 import frappe
 frappe.init(site="desarrollo.local")
@@ -649,7 +627,7 @@ PYTHON_CHECK
         fi
         
         echo ""
-        echo ">>> Paso 9.7: Verificando estructura completa del DocType..."
+        echo ">>> Paso 9.8: Verificando estructura completa del DocType..."
         ls -lah "$DOCTYPE_PATH"
     '
 
@@ -758,18 +736,10 @@ echo "   ✅ Módulo: gestion"
 echo "   ✅ DocType 'Asignacion de Equipo' completo y funcional"
 echo "   ✅ Dependencia requests>=2.31.0 instalada"
 echo ""
-echo "📚 PRÓXIMOS PASOS:"
+echo "📚 ACCEDER AL SISTEMA:"
 echo ""
-echo "   1. Copiar archivos del DocType desde el repositorio:"
-echo "      → asignacion_de_equipo.py (Controller)"
-echo "      → asignacion_de_equipo.js (Client Script)"
-echo "      → test_asignacion_de_equipo.py (Tests)"
-echo ""
-echo "   2. Acceder a Frappe:"
-echo "      → http://localhost:8000"
-echo "      → Usuario: Administrator"
-echo "      → Contraseña: Admin@2025"
-echo ""
-echo "   3. Buscar 'Asignacion de Equipo' y crear un registro de prueba"
+echo "   → http://localhost:8000"
+echo "   → Usuario: Administrator"
+echo "   → Contraseña: Admin@2025"
 echo ""
 echo "==================================================="
