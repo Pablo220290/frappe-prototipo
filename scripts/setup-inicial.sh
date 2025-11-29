@@ -253,6 +253,17 @@ docker-compose run --rm \
     bash -lc '
         set -e
         cd /workspace/frappe-bench
+        echo ">>> Paso 7.0: Creando README.md de la app..."
+        cat > apps/asignacion_equipo/README.md << "README_APP"
+        # Asignacion Equipo
+
+        App para gestión de asignación de equipos a empleados.
+
+        ## Características
+        - Vinculación con módulo Employee (HRMS)
+        - Verificación de garantías vía API REST
+        - Validaciones de número de serie
+        README_APP
         
         echo ">>> Paso 7.1: Creando pyproject.toml con requests..."
         cat > apps/asignacion_equipo/pyproject.toml << "EOF"
