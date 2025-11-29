@@ -1,5 +1,5 @@
 # =================================================
-# Docker Compose - Prototipo Didactico Frappe
+# Docker Compose - Prototipo Frappe
 # =================================================
 
 services:
@@ -96,19 +96,12 @@ services:
     ports:
       - "8000:8000"
       - "9000:9000"
-    # MONTAMOS TODO EL PROYECTO EN /workspace
     volumes:
       - .:/workspace
     networks:
       - frappe-network
-    # El bench va a vivir en /workspace/frappe-bench
     working_dir: /workspace/frappe-bench
-    command: >
-      bash -c "if [ -f ./Procfile ]; then
-        bench start;
-      else
-        sleep infinity;
-      fi"
+    command: bash -c "if [ -f ./Procfile ]; then bench start; else sleep infinity; fi"
 
 # ===========================================
 # VOLUMENES PERSISTENTES
