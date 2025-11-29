@@ -307,7 +307,12 @@ EOF
         
         echo ""
         echo ">>> Paso 7.4: Registrando app en apps.txt..."
+        sed -i -e '\''$a\'\'' sites/apps.txt 2>/dev/null || true
         echo "asignacion_equipo" >> sites/apps.txt
+        
+        echo ">>> Verificando apps.txt..."
+        echo "Contenido de apps.txt:"
+        cat -A sites/apps.txt
         
         echo ""
         echo ">>> Paso 7.5: Instalando asignacion_equipo en el sitio..."
