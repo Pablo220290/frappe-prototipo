@@ -306,7 +306,11 @@ EOF
         }
         
         echo ""
-        echo ">>> Paso 7.4: Instalando asignacion_equipo en el sitio..."
+        echo ">>> Paso 7.4: Registrando app en apps.txt..."
+        echo "asignacion_equipo" >> sites/apps.txt
+        
+        echo ""
+        echo ">>> Paso 7.5: Instalando asignacion_equipo en el sitio..."
         bench --site desarrollo.local install-app asignacion_equipo
     '
 
